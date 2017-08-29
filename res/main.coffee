@@ -176,7 +176,7 @@ render = ->
     sphere_mesh?.visible = false
     e?.visible = true for e in environment
     c_camera.update renderer, scene
-    carpaint_mat.envMap = c_camera.renderTarget.texture
+    # carpaint_mat.envMap = c_camera.renderTarget.texture
     
     car?.visible = true
     sphere_mesh?.visible = true

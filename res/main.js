@@ -274,7 +274,6 @@ render = function() {
     }
   }
   c_camera.update(renderer, scene);
-  carpaint_mat.envMap = c_camera.renderTarget.texture;
   if (car != null) {
     car.visible = true;
   }
