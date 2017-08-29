@@ -172,15 +172,15 @@ animate = ->
 
 render = ->
 
-    car.visible = false
-    sphere_mesh.visible = false
-    e.visible = true for e in environment
+    car?.visible = false
+    sphere_mesh?.visible = false
+    e?.visible = true for e in environment
     c_camera.update renderer, scene
     carpaint_mat.envMap = c_camera.renderTarget.texture
     
-    car.visible = true
-    sphere_mesh.visible = true
-    e.visible = false for e in environment
+    car?.visible = true
+    sphere_mesh?.visible = true
+    e?.visible = false for e in environment
     renderer.render scene, camera
     stats.update()
 

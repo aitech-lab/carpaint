@@ -261,19 +261,31 @@ animate = function() {
 
 render = function() {
   var e, j, k, len, len1;
-  car.visible = false;
-  sphere_mesh.visible = false;
+  if (car != null) {
+    car.visible = false;
+  }
+  if (sphere_mesh != null) {
+    sphere_mesh.visible = false;
+  }
   for (j = 0, len = environment.length; j < len; j++) {
     e = environment[j];
-    e.visible = true;
+    if (e != null) {
+      e.visible = true;
+    }
   }
   c_camera.update(renderer, scene);
   carpaint_mat.envMap = c_camera.renderTarget.texture;
-  car.visible = true;
-  sphere_mesh.visible = true;
+  if (car != null) {
+    car.visible = true;
+  }
+  if (sphere_mesh != null) {
+    sphere_mesh.visible = true;
+  }
   for (k = 0, len1 = environment.length; k < len1; k++) {
     e = environment[k];
-    e.visible = false;
+    if (e != null) {
+      e.visible = false;
+    }
   }
   renderer.render(scene, camera);
   return stats.update();
