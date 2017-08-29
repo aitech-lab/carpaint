@@ -1,0 +1,15 @@
+# Blender MTL File: 'BMW27GE.blend'
+# Material Count: 1
+
+newmtl bodyGE.Blue
+Ns 37.254902
+Ka 1.000000 1.000000 1.000000
+Kd 0.063724 0.183630 0.447988
+Ks 0.013287 0.028247 0.100000
+Ke 0.003186 0.009181 0.022399
+Ni 1.000000
+d 1.000000
+illum 2
+map_Bump -bm 0.020000 -s 15.000000 15.000000 15.000000 /home/peko/Desktop/textures/clearcoat_NRM.png
+map_Kd -s 20.000000 20.000000 10.000000 /home/peko/Desktop/textures/sparkle.png
+refl /home/peko/Desktop/textures/ref.png

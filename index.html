@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+  body {
+    margin: 0px;
+    background-color: #000000;
+    overflow: hidden;
+  }
+  .tbox {position:absolute; display:none; padding:14px 17px; z-index:900}
+  .tinner {padding:15px; -moz-border-radius:5px; border-radius:5px; background:#fff url(images/preload.gif) no-repeat 50% 50%; border-right:1px solid #333; border-bottom:1px solid #333}
+  .tmask {position:absolute; display:none; top:0px; left:0px; height:100%; width:100%; background:#000; z-index:800}
+  .tclose {position:absolute; top:0px; right:0px; width:30px; height:30px; cursor:pointer; background:url(images/close.png) no-repeat}
+  .tclose:hover {background-position:0 -30px}
+  .dg .cr.function .property-name {width: 100%;}
+  #description {padding: 5px; position: absolute; top: 5px; left: 5px; background-color: #ddd}
+  #description p {margin: 0px;}
+
+  </style>
+  <script src="res/three.73.min.js"></script>
+  <script src="res/Stats.js"></script>
+  <script src="res/dat.gui.min.js"></script>
+  <script src="res/tinybox.js"></script>
+  <script src="res/OBJLoader.js"></script>
+  <script src="res/TrackballControls.js"></script>
+
+</head>
+<body>
+
+<script>
+
+  // This is a basic asyncronous shader loader for THREE.js.
+  function ShaderLoader(vertex_url, fragment_url, onLoad, onProgress, onError) {
+      var vertex_loader = new THREE.XHRLoader(THREE.DefaultLoadingManager);
+      vertex_loader.setResponseType('text');
+      vertex_loader.load(vertex_url, function (vertex_text) {
+          var fragment_loader = new THREE.XHRLoader(THREE.DefaultLoadingManager);
+          fragment_loader.setResponseType('text');
+          fragment_loader.load(fragment_url, function (fragment_text) {
+              onLoad(vertex_text, fragment_text);
+          });
+      }, onProgress, onError);
+  }
+
+  var camera, scene, renderer;
+  var mesh, material, sky;
+  init();
+  animate();
+
+  function init(){
+    renderer = new THREE.WebGLRenderer();
+    //var gl = renderer.domElement.getContext('webgl') || renderer.domElement.getContext('experimental-webgl');
+    //console.log(gl);
+    //gl.getExtension('OES_standard_derivatives');
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    //var testmat = new THREE.MeshPhongMaterial();
+
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth
+        / window.innerHeight, 1, 100000);
+    camera.position.z = 500;
+
+    scene = new THREE.Scene();
+
+    // Add skybox
+    var folder = "res/"
+    var urls = [ folder+"right.png", folder+"left.png",
+                 folder+"up.png"   , folder+"down.png",
+                 folder+"front.png", folder+"back.png" ];
+    var textureCube = THREE.ImageUtils.loadTextureCube( urls );
+    
+    // Skybox
+    var skyshader = THREE.ShaderLib[ "cube" ];
+    skyshader.uniforms[ "tCube" ].value = textureCube;
+    var skymaterial = new THREE.ShaderMaterial( {
+      fragmentShader: skyshader.fragmentShader,
+      vertexShader  : skyshader.vertexShader,
+      uniforms      : skyshader.uniforms,
+      depthWrite    : false,
+      side          : THREE.BackSide
+    } );
+
+    sky = new THREE.Mesh( new THREE.BoxGeometry( 1500, 1500, 1500 ), skymaterial );
+    sky.visible = false;
+    scene.add( sky );
+
+    controls = new THREE.TrackballControls( camera, renderer.domElement );
+    controls.addEventListener( 'change', render );
+
+    var normalMap = THREE.ImageUtils.loadTexture( 'res/car_normal.png', null, function(something){
+      render();
+    } );
+
+    var uniforms = {
+        paintColor1:             { type: "c", value: new THREE.Color(0x002f66) },
+        paintColor2:             { type: "c", value: new THREE.Color(0x002c99) },
+        paintColor3:             { type: "c", value: new THREE.Color(0x276296) },
+        normalMap:               { type: "t", value: normalMap},
+        normalScale:             { type: "f", value: 0.0, min: 0.0, max: 1.0},
+        glossLevel:              { type: "f", value: 1.0, min: 0.0, max: 5.0},
+        brightnessFactor:        { type: "f", value: 1.0, min: 0.0, max: 1.0},
+        envMap:                  { type: "t", value: textureCube},
+        microflakeNMap:          { type: "t", value: THREE.ImageUtils.loadTexture( 'res/SparkleNoiseMap.png')},
+        flakeColor:              { type: "c", value: new THREE.Color(0xFFFFFF) },
+        flakeScale:              { type: "f", value: -30.0, min: -50.0, max: 1.0},
+        normalPerturbation:      { type: "f", value: 1.0, min: -1.0, max: 1.0},
+        microflakePerturbationA: { type: "f", value: 0.1, min: -1.0, max: 1.0},
+        microflakePerturbation:  { type: "f", value: 0.48, min: 0.0, max: 1.0}
+        //offsetRepeat :         { type: "v4", value: new THREE.Vector4( 0, 0, 1, 1 ) }
+    };
+    uniforms.microflakeNMap.value.wrapS = uniforms.microflakeNMap.value.wrapT = THREE.RepeatWrapping
+
+    function onShaderLoad(vert,frag) {
+      material = new THREE.ShaderMaterial({
+        uniforms       : uniforms,
+        vertexShader   : vert,
+        fragmentShader : frag,
+        side           : THREE.DoubleSide,
+        derivatives    : true
+      });
+
+      var loader = new THREE.OBJLoader();
+      loader.load('res/bmw.obj', function(object){
+        mesh = object.children[0];
+        mesh.material = material;
+        scene.add(mesh);
+        render();
+      });
+    }
+    ShaderLoader("res/carpaint.vert", "res/carpaint.frag", onShaderLoad);
+    
+    //var geometry = new THREE.BoxGeometry(200, 200, 200);
+    // material = new THREE.MeshBasicMaterial();
+    //mesh = new THREE.Mesh(geometry, material);
+    //scene.add(mesh);
+
+    var light = new THREE.AmbientLight( 0x404040 ); // soft white light
+    scene.add( light );
+
+    var directionalLight = new THREE.DirectionalLight(0xffffff);
+    directionalLight.position.set(1, 1, 1).normalize();
+    scene.add(directionalLight);
+
+    stats = new Stats();
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.bottom = '0px';
+    document.body.appendChild( stats.domElement );
+
+    setupControls(uniforms);
+
+    window.addEventListener('resize', onWindowResize, false);
+
+  }
+
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    controls.handleResize();
+    render();
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+  }
+
+  function render() {
+    renderer.render(scene, camera);
+    stats.update();
+  }
+
+
+  function setupControls(ob) {
+    var gui = new dat.GUI();
+    var sceneFolder = gui.addFolder('Scene');
+    //var geoController = sceneFolder.add({Geometry:"box"}, 'Geometry', [ 'box', 'sphere', 'torusknot' ] );
+    //geoController.onChange(changeGeometry);
+    sceneFolder.add(sky, 'visible').name('Show Cubemap').onChange(function(){render();});
+    sceneFolder.open();
+    var uniformsFolder = gui.addFolder('Uniforms');
+    for(key in ob){
+      if(ob[key].type == 'f'){
+        var controller = uniformsFolder.add(ob[key], 'value').name(key);
+        if(typeof ob[key].min != 'undefined'){
+          controller = controller.min(ob[key].min).name(key);
+        }
+        if(typeof ob[key].max != 'undefined'){
+          controller = controller.max(ob[key].max).name(key);
+        }
+        controller.onChange(function(value){
+          this.object.value = parseFloat(value);
+          render();
+         });
+      }else if(ob[key].type == 'c'){
+        ob[key].guivalue = [ob[key].value.r * 255, ob[key].value.g * 255, ob[key].value.b * 255];
+        var controller = uniformsFolder.addColor(ob[key], 'guivalue').name(key);
+        controller.onChange(function(value){
+          this.object.value.setRGB(value[0]/255, value[1]/255, value[2]/255);
+          render();
+        });
+      }
+    }
+    uniformsFolder.open();
+    var sourceFolder = gui.addFolder('Source');
+    var butob = {
+        'view vertex shader code': function(){
+          TINY.box.show({html:'<div style="width: 500px; height: 500px;"><h3 style="margin: 0px; padding-bottom: 5px;">Vertex Shader</h3><pre style="overflow: scroll; height: 470px;">'+document.getElementById('vertexShader').text+'</pre></div>',animate:false,close:false,top:5})
+         },
+         'view fragment shader code': function(){
+           TINY.box.show({html:'<div style="width: 500px; height: 500px;"><h3 style="margin: 0px; padding-bottom: 5px;">Fragment Shader</h3><pre style="overflow: scroll; height: 470px;">'+document.getElementById('fragmentShader').text+'</pre></div>',animate:false,close:false,top:5})
+         }
+    };
+    sourceFolder.add(butob, 'view vertex shader code');
+    sourceFolder.add(butob, 'view fragment shader code');
+
+  }
+
+</script>
+
+
+</body>
+
+</html>
