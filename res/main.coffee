@@ -28,9 +28,10 @@ shader_loader = (vertex_url, fragment_url, onLoad, onProgress, onError) ->
 rnd = (r)-> (Math.random()-Math.random())*r/2.0
 
 environment = []
+lights = []
 create_evironment = ->
     textureLoader = new THREE.TextureLoader
-    materials = (new THREE.MeshPhongMaterial({ color: 0xffffff, map: textureLoader.load("res/txt#{i}.jpg") }) for i in [1..4])
+    materials = (new THREE.MeshBasicMaterial({ color: 0xffffff, map: textureLoader.load("res/txt#{i}.jpg") }) for i in [1..4])
 
     white_mat = new THREE.MeshBasicMaterial color: 0xffffff, side: THREE.DoubleSide 
     for f in [0..10]
@@ -50,6 +51,12 @@ create_evironment = ->
         plane.visible =false
         scene.add plane
         environment.push plane
+
+    # for f in [0..5]
+    #     l = new THREE.DirectionalLight 0xffffff
+    #     l.position.set(rnd(L), 200, rnd(400)).normalize()
+    #     scene.add l
+    #     lights.push l
 
 init = ->
 
@@ -120,12 +127,9 @@ init = ->
             scene.add car
             render()
     
-    light = new (THREE.AmbientLight)(0x404040)
+    # light = new (THREE.AmbientLight)(0x404040)
     # soft white light
-    scene.add light
-    directionalLight = new (THREE.DirectionalLight)(0xffffff)
-    directionalLight.position.set(1, 1, 1).normalize()
-    scene.add directionalLight
+    # scene.add light
 
     cube_shader = THREE.ShaderLib[ "cube" ]
     cube_mat = new THREE.ShaderMaterial( {
@@ -165,6 +169,11 @@ animate = ->
         e.position.x += 10.0;
         if e.position.x > L/2.0
             e.position.x = -L/2.0
+    
+    # for l in lights
+    #     l.position.x += 10.0;
+    #     if l.position.x > L/2.0
+    #         l.position.x = -L/2.0
 
     requestAnimationFrame animate
     controls.update()
@@ -182,7 +191,7 @@ render = ->
     sphere_mesh?.visible = true
     e?.visible = false for e in environment
     renderer.render scene, camera
-    stats.update()
+    stats?.update()
 
 setupControls = (ob) ->
 
