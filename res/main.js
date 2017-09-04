@@ -28,9 +28,9 @@ sphere_mesh = void 0;
 
 L = 1800;
 
-WIDTH = 640;
+WIDTH = 960;
 
-HEIGHT = 360;
+HEIGHT = WIDTH / 16 * 9;
 
 mime = 'video/webm';
 

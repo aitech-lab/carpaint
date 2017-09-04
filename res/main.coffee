@@ -16,8 +16,8 @@ sphere_mesh = undefined
 
 L = 1800
 
-WIDTH  = 640
-HEIGHT = 360
+WIDTH  = 960
+HEIGHT = WIDTH/16*9
 
 mime = 'video/webm'
 
