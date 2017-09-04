@@ -20,6 +20,7 @@ WIDTH  = 960
 HEIGHT = WIDTH/16*9
 
 mime = 'video/webm'
+out_mime = 'video/webm'
 
 class video_grabber 
 
@@ -58,7 +59,9 @@ class video_grabber
             downloadButton.disabled = false
 
     start_recording: =>
-        options = mimeType: mime
+        options = 
+            mimeType: out_mime
+            videoBitsPerSecond : 2500000
         @recorded_blobs = []
         try
             @media_recorder = new MediaRecorder(@stream, options)
