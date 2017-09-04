@@ -16,6 +16,103 @@ sphere_mesh = undefined
 
 L = 1800
 
+WIDTH  = 640
+HEIGHT = 360
+
+mime = 'video/webm'
+
+class video_grabber 
+
+    constructor: (@canvas)->
+        @media_source = new MediaSource
+        @media_source.addEventListener 'sourceopen', @handle_source_open, false        
+        isSecureOrigin = location.protocol == 'https:' or location.hostname == 'localhost'
+        
+        if !isSecureOrigin
+            alert 'getUserMedia() must be run from a secure origin: HTTPS or localhost.' + '\n\nChanging protocol to HTTPS'
+            location.protocol = 'HTTPS'
+
+        @stream = canvas.captureStream()
+        # frames per second
+        console.log 'Started @stream capture from canvas element: ', @stream
+
+    handle_source_open: (event) =>
+        console.log 'MediaSource opened'
+        @sourceBuffer = @media_source.addSourceBuffer('video/webm; codecs="vp8"')
+        console.log 'Source buffer: ', @sourceBuffer
+
+    handle_data_available: (event) =>
+        if event.data and event.data.size > 0
+            @recorded_blobs?.push event.data
+
+    handle_stop: (event) =>
+        console.log 'Recorder stopped: ', event
+
+    toggle_recording: =>
+        if recordButton.textContent == 'Start Recording'
+            startRecording()
+        else
+            stopRecording()
+            recordButton.textContent = 'Start Recording'
+            playButton.disabled = false
+            downloadButton.disabled = false
+
+    start_recording: =>
+        options = mimeType: mime
+        @recorded_blobs = []
+        try
+            @media_recorder = new MediaRecorder(@stream, options)
+        catch e0
+            console.log 'Unable to create MediaRecorder with options Object: ', e0
+            try
+                options = mimeType: "#{mime},codecs=vp9"
+                @media_recorder = new MediaRecorder(@stream, options)
+            catch e1
+              console.log 'Unable to create MediaRecorder with options Object: ', e1
+            try
+                options = 'video/vp8'
+                # Chrome 47
+                @media_recorder = new MediaRecorder(@stream, options)
+            catch e2
+                alert 'MediaRecorder is not supported by this browser.\n\n' + 'Try Firefox 29 or later, or Chrome 47 or later, with Enable experimental Web Platform features enabled from chrome://flags.'
+                console.error 'Exception while creating MediaRecorder:', e2
+
+        console.log 'Created MediaRecorder', @media_recorder, 'with options', options
+        @media_recorder.onstop          = @handle_stop
+        @media_recorder.ondataavailable = @handle_data_available
+        @media_recorder.start 100
+        # collect 100ms of data
+        console.log 'MediaRecorder started', @media_recorder
+
+    stop_recording: =>
+        @media_recorder.stop()
+        # console.log 'Recorded Blobs: ', @recorded_blobs
+        unless @video
+            @video = document.createElement "video"
+            document.body.appendChild @video
+            @video.controls = true
+            
+        superBuffer = new Blob(@recorded_blobs, type: mime)
+        @video.src = window.URL.createObjectURL superBuffer
+
+
+    download: =>
+        blob = new Blob(@recorded_blobs, type: mime)
+        url = window.URL.createObjectURL(blob)
+        a = document.createElement('a')
+        a.style.display = 'none'
+        a.href = url
+        a.download = 'carpaint.webm'
+        document.body.appendChild a
+        a.click()
+        setTimeout (->
+            document.body.removeChild a
+            window.URL.revokeObjectURL url
+            return
+        ), 100
+
+
+
 shader_loader = (vertex_url, fragment_url, onLoad, onProgress, onError) ->
     vertex_loader = new (THREE.XHRLoader)(THREE.DefaultLoadingManager)
     vertex_loader.setResponseType 'text'
@@ -62,12 +159,12 @@ init = ->
 
     renderer = new (THREE.WebGLRenderer)
     renderer.setPixelRatio window.devicePixelRatio
-    renderer.setSize window.innerWidth, window.innerHeight
+    renderer.setSize WIDTH, HEIGHT
     document.body.appendChild renderer.domElement
 
     scene = new THREE.Scene
 
-    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 100000)
+    camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 1, 100000)
     camera.position.z = 500
     
     c_camera = new THREE.CubeCamera  1, 1000, 256
@@ -158,9 +255,9 @@ init = ->
     window.addEventListener 'resize', onWindowResize, false
 
 onWindowResize = ->
-    camera.aspect = window.innerWidth / window.innerHeight
+    camera.aspect = WIDTH / HEIGHT
     camera.updateProjectionMatrix()
-    renderer.setSize window.innerWidth, window.innerHeight
+    renderer.setSize WIDTH, HEIGHT
     controls.handleResize()
     render()
 
@@ -195,7 +292,38 @@ render = ->
 
 setupControls = (ob) ->
 
-    gui = new (dat.GUI)
+    gui = new dat.GUI
+    
+    disable_btn = (btn)->
+        bs = btn.domElement.parentElement.style
+        bs.pointerEvents = "none"
+        bs.opacity       = .2;
+
+    enable_btn = (btn)->
+        bs = btn.domElement.parentElement.style
+        bs.pointerEvents = null
+        bs.opacity       = null 
+    
+    grabber = new video_grabber renderer.context.canvas    
+    buttons = 
+        record: ->
+            disable_btn rec_btn
+            enable_btn  stp_btn
+            do grabber?.start_recording
+        stop: ->
+            disable_btn stp_btn
+            enable_btn  rec_btn
+            enable_btn  dwn_btn
+            do grabber?.stop_recording
+        download: ->
+            do grabber.download
+
+    rec_btn = gui.add buttons, "record"
+    stp_btn = gui.add buttons, "stop"
+    dwn_btn = gui.add buttons, "download"
+    
+    disable_btn stp_btn
+    disable_btn dwn_btn
 
     sceneFolder = gui.addFolder('Scene')
     sceneFolder.add(sky, 'visible').name('Show Cubemap').onChange ->render()
@@ -244,3 +372,4 @@ setupControls = (ob) ->
 
 init()
 animate()
+
